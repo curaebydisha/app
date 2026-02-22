@@ -324,7 +324,7 @@ function ProductContent() {
                             <Button
                                 className="flex-1 gap-2 bg-[#d4af37] hover:bg-[#b5952f] text-black"
                                 onClick={async () => {
-                                    const shareUrl = `${window.location.origin}/share?id=${product.id}`
+                                    const shareUrl = `${window.location.origin}/app/share?id=${product.id}`
 
                                     const textParts = [
                                         product.name,

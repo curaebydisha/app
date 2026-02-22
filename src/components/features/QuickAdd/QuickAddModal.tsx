@@ -18,7 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Camera, MapPin, Loader2 } from "lucide-react"
+import { Camera, MapPin, Loader2, Upload } from "lucide-react"
 import { useState, useEffect } from "react"
 
 interface QuickAddModalProps {
@@ -34,14 +34,14 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
     const [imagePreview, setImagePreview] = useState<string | null>(null)
     const [currency, setCurrency] = useState("THB")
     const [price, setPrice] = useState("")
-    const [exchangeRate, setExchangeRate] = useState("2.35") // Default THB rate
+    const [exchangeRate, setExchangeRate] = useState("2.90") // Default THB rate
     const [storeName, setStoreName] = useState("")
     const [productName, setProductName] = useState("")
     const [notes, setNotes] = useState("")
     const [sellerMobile, setSellerMobile] = useState("")
     const [quantity, setQuantity] = useState("1")
     const [sizes, setSizes] = useState("")
-    const [markup, setMarkup] = useState("50")
+    const [markup, setMarkup] = useState("120")
     const [sellingPrice, setSellingPrice] = useState("")
     const [location, setLocation] = useState<{ lat: number, lng: number } | undefined>(undefined)
     const [locating, setLocating] = useState(false)
@@ -183,19 +183,40 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
                     {/* Image Input */}
                     <div className="flex flex-col items-center justify-center gap-4">
                         <div
-                            className="relative flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/5 hover:bg-muted/10 transition-colors"
-                            onClick={() => document.getElementById("camera-input")?.click()}
+                            className="relative flex h-48 w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/5 transition-colors overflow-hidden"
                         >
                             {imagePreview ? (
-                                <img
-                                    src={imagePreview}
-                                    alt="Preview"
-                                    className="h-full w-full object-cover rounded-lg"
-                                />
+                                <div className="group relative h-full w-full cursor-pointer" onClick={() => document.getElementById("camera-input")?.click()}>
+                                    <img
+                                        src={imagePreview}
+                                        alt="Preview"
+                                        className="h-full w-full object-cover"
+                                    />
+                                    <div className="absolute inset-0 flex items-center justify-center gap-4 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                                        <Button type="button" size="icon" variant="secondary" onClick={(e) => { e.stopPropagation(); document.getElementById("camera-input")?.click(); }}>
+                                            <Camera className="h-4 w-4" />
+                                        </Button>
+                                        <Button type="button" size="icon" variant="secondary" onClick={(e) => { e.stopPropagation(); document.getElementById("gallery-input")?.click(); }}>
+                                            <Upload className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
                             ) : (
-                                <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                                    <Camera className="h-8 w-8" />
-                                    <span className="text-sm">Tap to take photo</span>
+                                <div className="flex h-full w-full">
+                                    <div
+                                        className="flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 border-r-2 border-dashed border-muted-foreground/25 hover:bg-muted/10 transition-colors"
+                                        onClick={() => document.getElementById("camera-input")?.click()}
+                                    >
+                                        <Camera className="h-8 w-8 text-muted-foreground" />
+                                        <span className="text-xs font-medium text-muted-foreground">Camera</span>
+                                    </div>
+                                    <div
+                                        className="flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 hover:bg-muted/10 transition-colors"
+                                        onClick={() => document.getElementById("gallery-input")?.click()}
+                                    >
+                                        <Upload className="h-8 w-8 text-muted-foreground" />
+                                        <span className="text-xs font-medium text-muted-foreground">Gallery</span>
+                                    </div>
                                 </div>
                             )}
                             <input
@@ -203,6 +224,13 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
                                 type="file"
                                 accept="image/*"
                                 capture="environment"
+                                className="hidden"
+                                onChange={handleImageChange}
+                            />
+                            <input
+                                id="gallery-input"
+                                type="file"
+                                accept="image/*"
                                 className="hidden"
                                 onChange={handleImageChange}
                             />

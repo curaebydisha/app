@@ -2,10 +2,12 @@
 
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Instagram, Phone, Share2, X } from "lucide-react"
+import { Instagram, Phone, Share2, X, Download } from "lucide-react"
 import Link from "next/link"
+import { useProducts } from "@/context/ProductContext"
 
 export function OwnerProfileModal({ children }: { children: React.ReactNode }) {
+    const { products } = useProducts()
     return (
         <Dialog>
             <DialogTrigger asChild>
@@ -17,7 +19,7 @@ export function OwnerProfileModal({ children }: { children: React.ReactNode }) {
                 <div className="relative">
                     <div className="h-32 w-32 rounded-full overflow-hidden border-4 border-[#d4af37] shadow-xl">
                         <img
-                            src="/owner.jpg"
+                            src="/app/owner.jpg"
                             alt="Disha Sanghvi"
                             className="h-full w-full object-cover"
                         />
@@ -43,6 +45,56 @@ export function OwnerProfileModal({ children }: { children: React.ReactNode }) {
                             <Phone className="h-5 w-5" /> Chat on WhatsApp
                         </Button>
                     </Link>
+
+                    <Button
+                        variant="secondary"
+                        className="w-full gap-2"
+                        onClick={() => {
+                            if (!products || products.length === 0) {
+                                alert("No products to export.")
+                                return
+                            }
+
+                            // Define headers
+                            const headers = ["ID", "Name", "Store", "Mobile", "Price (Foreign)", "Currency", "Exchange Rate", "Price (INR)", "Selling Price", "Quantity", "Sizes", "Notes", "Date Added", "Image Link"]
+
+                            // Convert products to CSV rows
+                            const rows = products.map(p => [
+                                p.id,
+                                `"${p.name.replace(/"/g, '""')}"`, // Escape quotes
+                                `"${p.storeName.replace(/"/g, '""')}"`,
+                                p.sellerMobile || "",
+                                p.price,
+                                p.currency,
+                                p.exchangeRate,
+                                p.priceInr,
+                                p.sellingPrice || "",
+                                p.quantity,
+                                `"${(p.sizes || "").replace(/"/g, '""')}"`,
+                                `"${(p.notes || "").replace(/"/g, '""')}"`,
+                                new Date(p.timestamp).toLocaleDateString(),
+                                p.image
+                            ])
+
+                            // Combine headers and rows
+                            const csvContent = [
+                                headers.join(","),
+                                ...rows.map(row => row.join(","))
+                            ].join("\n")
+
+                            // Create Blob and Download
+                            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+                            const url = URL.createObjectURL(blob)
+                            const link = document.createElement("a")
+                            link.setAttribute("href", url)
+                            link.setAttribute("download", `curae_inventory_${new Date().toISOString().split('T')[0]}.csv`)
+                            document.body.appendChild(link)
+                            link.click()
+                            document.body.removeChild(link)
+                        }}
+                    >
+                        <Download className="h-5 w-5" /> Export to Excel (CSV)
+                    </Button>
                 </div>
 
                 {/* QR Code Placeholder (Using API for simplicity to avoid deps) */}
@@ -62,7 +114,7 @@ export function OwnerProfileModal({ children }: { children: React.ReactNode }) {
                     size="sm"
                     className="text-muted-foreground hover:text-foreground gap-2 -mt-2"
                     onClick={() => {
-                        const url = window.location.origin + '/profile'
+                        const url = window.location.origin + '/app/profile'
                         if (navigator.share) {
                             navigator.share({
                                 title: "Connect with Disha Sanghvi | Curae",

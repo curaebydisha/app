@@ -30,7 +30,7 @@ export default function ProfilePage() {
                 <div className="relative">
                     <div className="h-32 w-32 rounded-full overflow-hidden border-4 border-[#d4af37] shadow-xl">
                         <img
-                            src="/owner.jpg"
+                            src="/app/owner.jpg"
                             alt="Disha Sanghvi"
                             className="h-full w-full object-cover"
                         />

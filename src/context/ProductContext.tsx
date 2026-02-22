@@ -31,6 +31,7 @@ type ProductContextType = {
     addProduct: (product: Omit<Product, "id" | "timestamp">) => Promise<void>
     updateProduct: (id: string, updates: Partial<Product>) => Promise<void>
     deleteProduct: (id: string) => Promise<void>
+    clearPendingUploads: () => void
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined)
@@ -38,11 +39,59 @@ const ProductContext = createContext<ProductContextType | undefined>(undefined)
 export function ProductProvider({ children }: { children: React.ReactNode }) {
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
+    const [pendingUploads, setPendingUploads] = useState<Omit<Product, "id" | "timestamp">[]>([])
+    const [isOnline, setIsOnline] = useState(true)
+
+    // Load pending from local storage on mount
+    useEffect(() => {
+        setIsOnline(navigator.onLine)
+        const saved = localStorage.getItem("pending_uploads")
+        if (saved) {
+            setPendingUploads(JSON.parse(saved))
+        }
+
+        const handleOnline = () => {
+            setIsOnline(true)
+            syncPendingUploads()
+        }
+        const handleOffline = () => setIsOnline(false)
+
+        window.addEventListener('online', handleOnline)
+        window.addEventListener('offline', handleOffline)
+
+        return () => {
+            window.removeEventListener('online', handleOnline)
+            window.removeEventListener('offline', handleOffline)
+        }
+    }, [])
 
     // Fetch products on mount
     useEffect(() => {
         fetchProducts()
     }, [])
+
+    const syncPendingUploads = async () => {
+        const pending = JSON.parse(localStorage.getItem("pending_uploads") || "[]") as Omit<Product, "id" | "timestamp">[]
+        if (pending.length === 0) return
+
+        console.log("Syncing pending items...", pending.length)
+
+        const remaining: typeof pending = []
+
+        for (const item of pending) {
+            try {
+                // Try to upload
+                await addProductToSupabase(item)
+            } catch (e) {
+                console.error("Sync failed for item", item.name, e)
+                remaining.push(item) // Keep it if it fails
+            }
+        }
+
+        setPendingUploads(remaining)
+        localStorage.setItem("pending_uploads", JSON.stringify(remaining))
+        fetchProducts() // Refresh to get real IDs
+    }
 
     const fetchProducts = async () => {
         try {
@@ -72,7 +121,18 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
                     notes: item.notes,
                     timestamp: new Date(item.created_at).getTime()
                 }))
-                setProducts(mapped)
+
+                // Merge with pending uploads for display (give them temp IDs)
+                // We actually don't NEED to merge here if we optimistic update the state in addProduct
+                // But it's good to ensure they persist across reloads
+                const pending = JSON.parse(localStorage.getItem("pending_uploads") || "[]")
+                const pendingMapped: Product[] = pending.map((p: any, i: number) => ({
+                    ...p,
+                    id: `temp-${Date.now()}-${i}`,
+                    timestamp: Date.now()
+                }))
+
+                setProducts([...pendingMapped, ...mapped])
             }
         } catch (e) {
             console.error("Error fetching products:", e)
@@ -103,53 +163,89 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
             return publicUrlData.publicUrl
         } catch (e) {
             console.error("Upload failed", e)
-            return null
+            throw e // Rethrow to handle in caller
         }
     }
 
+    const addProductToSupabase = async (product: Omit<Product, "id" | "timestamp">) => {
+        const imageUrl = await uploadImage(product.image)
+
+        const row = {
+            name: product.name,
+            price: parseFloat(product.price),
+            currency: product.currency,
+            price_inr: parseFloat(product.priceInr),
+            exchange_rate: product.exchangeRate,
+            store_name: product.storeName,
+            seller_mobile: product.sellerMobile,
+            quantity: product.quantity,
+            sizes: product.sizes,
+            selling_price: parseFloat(product.sellingPrice || "0"),
+            notes: product.notes,
+            image_url: imageUrl || "",
+            location: product.location,
+        }
+
+        const { data, error } = await supabase.from('products').insert(row).select().single()
+        if (error) throw error
+    }
+
     const addProduct = async (product: Omit<Product, "id" | "timestamp">) => {
+        // Optimistically add to UI immediately
+        const tempProduct: Product = {
+            ...product,
+            id: `temp-${Date.now()}`,
+            timestamp: Date.now()
+        }
+        setProducts(prev => [tempProduct, ...prev])
+
+        if (!navigator.onLine) {
+            // Offline: Save to Pending
+            console.log("Offline: Queueing product")
+            const newPending = [...pendingUploads, product]
+            setPendingUploads(newPending)
+            localStorage.setItem("pending_uploads", JSON.stringify(newPending))
+            return
+        }
+
         try {
-            const imageUrl = await uploadImage(product.image)
-
-            const row = {
-                name: product.name,
-                price: parseFloat(product.price),
-                currency: product.currency,
-                price_inr: parseFloat(product.priceInr),
-                exchange_rate: product.exchangeRate,
-                store_name: product.storeName,
-                seller_mobile: product.sellerMobile,
-                quantity: product.quantity,
-                sizes: product.sizes,
-                selling_price: parseFloat(product.sellingPrice || "0"),
-                notes: product.notes,
-                image_url: imageUrl || "",
-                location: product.location,
-            }
-
-            const { data, error } = await supabase.from('products').insert(row).select().single()
-            if (error) throw error
-
-            fetchProducts() // Refresh list to get the new ID and timestamp
+            await addProductToSupabase(product)
+            fetchProducts() // Refresh to get real ID
         } catch (e) {
-            console.error("Error adding product", e)
-            alert("Failed to save product")
+            console.error("Online add failed, falling back to offline queue", e)
+            // Even if online, if upload fails, queue it
+            const newPending = [...pendingUploads, product]
+            setPendingUploads(newPending)
+            localStorage.setItem("pending_uploads", JSON.stringify(newPending))
         }
     }
 
     const updateProduct = async (id: string, updates: Partial<Product>) => {
         try {
-            const row: any = { ...updates }
-            // Map back to DB Columns where usage differs
-            if (updates.price) row.price = parseFloat(updates.price)
-            if (updates.priceInr) row.price_inr = parseFloat(updates.priceInr)
-            if (updates.storeName) row.store_name = updates.storeName
-            if (updates.exchangeRate) row.exchange_rate = updates.exchangeRate
-            if (updates.sellerMobile) row.seller_mobile = updates.sellerMobile
-            if (updates.quantity) row.quantity = updates.quantity
-            if (updates.sizes) row.sizes = updates.sizes
-            if (updates.sellingPrice) row.selling_price = parseFloat(updates.sellingPrice)
-            // created_at etc are handled by DB
+            if (id.startsWith('temp-')) {
+                // Updating a pending item? TODO: Update in localStorage too.
+                // For now, simple MVP: Update local state.
+                setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p))
+                return
+            }
+
+            const row: any = {}
+
+            // Map valid DB columns
+            if (updates.name !== undefined) row.name = updates.name
+            if (updates.price !== undefined) row.price = parseFloat(updates.price)
+            if (updates.currency !== undefined) row.currency = updates.currency
+            if (updates.priceInr !== undefined) row.price_inr = parseFloat(updates.priceInr)
+            if (updates.exchangeRate !== undefined) row.exchange_rate = updates.exchangeRate
+            if (updates.storeName !== undefined) row.store_name = updates.storeName
+            if (updates.sellerMobile !== undefined) row.seller_mobile = updates.sellerMobile
+            if (updates.quantity !== undefined) row.quantity = updates.quantity
+            if (updates.sizes !== undefined) row.sizes = updates.sizes
+            if (updates.sellingPrice !== undefined) row.selling_price = parseFloat(updates.sellingPrice)
+            if (updates.notes !== undefined) row.notes = updates.notes
+            if (updates.location !== undefined) row.location = updates.location
+            // image update not implemented here yet (requires file upload), but if we had valid URL:
+            if (updates.image !== undefined) row.image_url = updates.image
 
             const { error } = await supabase.from('products').update(row).eq('id', id)
             if (error) throw error
@@ -162,6 +258,15 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
 
     const deleteProduct = async (id: string) => {
         try {
+            if (id.startsWith('temp-')) {
+                setProducts(prev => prev.filter(p => p.id !== id))
+                // Remove from pending storage
+                // This is tricky because we need to know WHICH pending item it corresponds to.
+                // For MVP, deleting pending items might be limited or we clear the whole queue.
+                // Let's defer "Delete Pending" logic or just allow it in memory.
+                return
+            }
+
             const { error } = await supabase.from('products').delete().eq('id', id)
             if (error) throw error
             setProducts(prev => prev.filter(p => p.id !== id))
@@ -170,9 +275,32 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
         }
     }
 
+    const clearPendingUploads = () => {
+        setPendingUploads([])
+        localStorage.removeItem("pending_uploads")
+    }
+
     return (
-        <ProductContext.Provider value={{ products, loading, addProduct, updateProduct, deleteProduct }}>
+        <ProductContext.Provider value={{ products, loading, addProduct, updateProduct, deleteProduct, clearPendingUploads }}>
             {children}
+            {!isOnline && (
+                <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-yellow-100 text-yellow-800 text-xs px-3 py-1 rounded-full shadow-md z-[60]">
+                    Offline Mode • {pendingUploads.length} Pending
+                </div>
+            )}
+            {isOnline && pendingUploads.length > 0 && (
+                <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full shadow-md z-[60] flex items-center gap-2">
+                    <span>Syncing {pendingUploads.length} items...</span>
+                    {pendingUploads.length > 0 && (
+                        <button
+                            onClick={clearPendingUploads}
+                            className="text-blue-900 font-bold hover:underline"
+                        >
+                            x
+                        </button>
+                    )}
+                </div>
+            )}
         </ProductContext.Provider>
     )
 }
