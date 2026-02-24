@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button"
 type PublicProduct = {
     id: string
     name: string
-    image_url: string
+    image_url: string // retained for backwards safety
+    images: string[]
     selling_price: number | null
     notes: string | null
     quantity: number
@@ -24,6 +25,7 @@ function ShareContent() {
     const id = searchParams.get('id')
     const [product, setProduct] = useState<PublicProduct | null>(null)
     const [loading, setLoading] = useState(true)
+    const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
     useEffect(() => {
         if (!id) return;
@@ -37,7 +39,20 @@ function ShareContent() {
                 .single()
 
             if (data) {
-                setProduct(data as PublicProduct)
+                let parsedImages: string[] = []
+                try {
+                    parsedImages = JSON.parse(data.image_url)
+                    if (!Array.isArray(parsedImages)) {
+                        parsedImages = data.image_url ? [data.image_url] : []
+                    }
+                } catch {
+                    parsedImages = data.image_url ? [data.image_url] : []
+                }
+
+                setProduct({
+                    ...data,
+                    images: parsedImages.length > 0 ? parsedImages : (data.image_url ? [data.image_url] : [])
+                } as PublicProduct)
             }
             setLoading(false)
         }
@@ -47,9 +62,9 @@ function ShareContent() {
     if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
     if (!product) return <div className="min-h-screen flex items-center justify-center">Product not found</div>
 
-    const downloadImage = async () => {
+    const downloadImage = async (imageUrl: string) => {
         try {
-            const response = await fetch(product.image_url)
+            const response = await fetch(imageUrl)
             const blob = await response.blob()
             const url = window.URL.createObjectURL(blob)
             const link = document.createElement('a')
@@ -70,16 +85,31 @@ function ShareContent() {
         <div className="min-h-screen bg-background font-[family-name:var(--font-geist-sans)] pb-10">
             {/* Image Section */}
             <div className="relative w-full aspect-[4/5] bg-muted">
-                <img
-                    src={product.image_url}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                />
+                <div className="w-full h-full overflow-x-auto snap-x snap-mandatory flex scrollbar-hide">
+                    {product.images.map((img, idx) => (
+                        <div key={idx} className="min-w-full h-full snap-center relative">
+                            <img
+                                src={img}
+                                alt={`${product.name} ${idx + 1}`}
+                                className="h-full w-full object-cover"
+                            />
+                        </div>
+                    ))}
+                </div>
+
+                {product.images.length > 1 && (
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                        {product.images.map((_, idx) => (
+                            <div key={idx} className="h-1.5 w-1.5 rounded-full bg-white/80 shadow-sm"></div>
+                        ))}
+                    </div>
+                )}
+
                 <Button
                     size="icon"
                     variant="secondary"
-                    className="absolute top-4 right-4 rounded-full bg-black/50 text-white hover:bg-black/70 border-none"
-                    onClick={downloadImage}
+                    className="absolute top-4 right-4 rounded-full bg-black/50 text-white hover:bg-black/70 border-none z-10"
+                    onClick={() => downloadImage(product.images[0])}
                 >
                     <Download className="h-5 w-5" />
                 </Button>

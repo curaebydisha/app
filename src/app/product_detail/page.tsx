@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, MapPin, Share2, Trash2, Edit2, X, Download, Maximize2 } from "lucide-react"
+import { ArrowLeft, MapPin, Share2, Trash2, Edit2, X, Download, Maximize2, Camera, Upload, ChevronLeft, ChevronRight } from "lucide-react"
 import { useState, useEffect, Suspense } from "react"
 import { Product } from "@/context/ProductContext"
 
@@ -17,8 +17,12 @@ function ProductContent() {
     const [isEditing, setIsEditing] = useState(false)
     const [editForm, setEditForm] = useState<Partial<Product>>({})
     const [showFullImage, setShowFullImage] = useState(false)
+    const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
     const product = products.find(p => p.id === id)
+
+    // For edit form images
+    const [editImages, setEditImages] = useState<string[]>([])
 
     useEffect(() => {
         if (product) {
@@ -32,6 +36,7 @@ function ProductContent() {
                 sellingPrice: product.sellingPrice,
                 notes: product.notes
             })
+            setEditImages(product.images || (product.image ? [product.image] : []))
         }
     }, [product])
 
@@ -55,7 +60,11 @@ function ProductContent() {
             priceInr = (priceNum * rateNum).toFixed(2)
         }
 
-        updateProduct(product.id, { ...editForm, priceInr })
+        updateProduct(product.id, {
+            ...editForm,
+            priceInr,
+            images: editImages
+        })
         setIsEditing(false)
     }
 
@@ -72,13 +81,14 @@ function ProductContent() {
         window.open(url, '_blank')
     }
 
-    const downloadImage = async () => {
+    const downloadImage = async (imageUrl: string) => {
         try {
-            const response = await fetch(product.image)
+            const response = await fetch(imageUrl)
             const blob = await response.blob()
             const url = window.URL.createObjectURL(blob)
             const link = document.createElement('a')
             link.href = url
+            // Extract filename or generate one
             link.download = `curae-${product.name.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.jpg`
             document.body.appendChild(link)
             link.click()
@@ -90,6 +100,24 @@ function ProductContent() {
         }
     }
 
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || [])
+        files.forEach(file => {
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                setEditImages(prev => [...prev, reader.result as string])
+            }
+            reader.readAsDataURL(file)
+        })
+        e.target.value = ""
+    }
+
+    const removeImage = (index: number) => {
+        setEditImages(prev => prev.filter((_, i) => i !== index))
+    }
+
+    const displayImages = isEditing ? editImages : (product.images?.length > 0 ? product.images : [product.image])
+
     return (
         <div className="min-h-screen bg-background pb-20 font-[family-name:var(--font-geist-sans)]">
             {/* Full Screen Image Modal */}
@@ -100,7 +128,7 @@ function ProductContent() {
                             variant="secondary"
                             size="icon"
                             className="rounded-full bg-white/20 text-white hover:bg-white/40 border-none"
-                            onClick={downloadImage}
+                            onClick={() => downloadImage(displayImages[currentImageIndex])}
                         >
                             <Download className="h-6 w-6" />
                         </Button>
@@ -113,27 +141,123 @@ function ProductContent() {
                             <X className="h-6 w-6" />
                         </Button>
                     </div>
-                    <div className="w-full h-full overflow-auto flex items-center justify-center p-2">
+                    <div className="w-full h-full flex items-center justify-center p-2 relative">
+                        {displayImages.length > 1 && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute left-4 z-10 text-white/50 hover:text-white bg-black/20 hover:bg-black/50 rounded-full"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    setCurrentImageIndex(prev => prev === 0 ? displayImages.length - 1 : prev - 1)
+                                }}
+                            >
+                                <ChevronLeft className="h-8 w-8" />
+                            </Button>
+                        )}
                         <img
-                            src={product.image}
+                            src={displayImages[currentImageIndex]}
                             alt={product.name}
                             className="max-w-none w-full object-contain max-h-full"
                         />
+                        {displayImages.length > 1 && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-4 z-10 text-white/50 hover:text-white bg-black/20 hover:bg-black/50 rounded-full"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    setCurrentImageIndex(prev => prev === displayImages.length - 1 ? 0 : prev + 1)
+                                }}
+                            >
+                                <ChevronRight className="h-8 w-8" />
+                            </Button>
+                        )}
                     </div>
                 </div>
             )}
 
             {/* Header Image */}
             <div className="relative h-[50vh] w-full bg-muted group">
-                <img
-                    src={product.image}
-                    alt={product.name}
-                    className="h-full w-full object-cover cursor-pointer"
-                    onClick={() => setShowFullImage(true)}
-                />
-                <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                    <Maximize2 className="h-12 w-12 text-white/80 drop-shadow-lg" />
+                <div className="w-full h-full overflow-x-auto snap-x snap-mandatory flex scrollbar-hide">
+                    {displayImages.map((img, idx) => (
+                        <div key={idx} className="min-w-full h-full snap-center relative">
+                            <img
+                                src={img}
+                                alt={`${product.name} ${idx + 1}`}
+                                className="h-full w-full object-cover cursor-pointer"
+                                onClick={() => {
+                                    if (!isEditing) {
+                                        setCurrentImageIndex(idx)
+                                        setShowFullImage(true)
+                                    }
+                                }}
+                            />
+                            {isEditing && (
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
+                                    <Button
+                                        variant="destructive"
+                                        size="icon"
+                                        className="rounded-full pointer-events-auto shadow-lg shadow-black/50"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            removeImage(idx)
+                                        }}
+                                    >
+                                        <Trash2 className="h-5 w-5" />
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    ))}
                 </div>
+
+                {!isEditing && (
+                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                        <Maximize2 className="h-12 w-12 text-white/80 drop-shadow-lg" />
+                    </div>
+                )}
+
+                {displayImages.length > 1 && !isEditing && (
+                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                        {displayImages.map((_, idx) => (
+                            <div key={idx} className="h-1.5 w-1.5 rounded-full bg-white/80 shadow-sm"></div>
+                        ))}
+                    </div>
+                )}
+
+                {isEditing && (
+                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4 z-10">
+                        <Button
+                            className="rounded-full bg-black/70 hover:bg-black/90 text-white shadow-lg gap-2"
+                            onClick={() => document.getElementById("edit-camera-input")?.click()}
+                        >
+                            <Camera className="h-4 w-4" /> Camera
+                        </Button>
+                        <Button
+                            className="rounded-full bg-white/90 hover:bg-white text-black shadow-lg gap-2"
+                            onClick={() => document.getElementById("edit-gallery-input")?.click()}
+                        >
+                            <Upload className="h-4 w-4" /> Gallery
+                        </Button>
+                        <input
+                            id="edit-camera-input"
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            className="hidden"
+                            onChange={handleImageChange}
+                        />
+                        <input
+                            id="edit-gallery-input"
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={handleImageChange}
+                        />
+                    </div>
+                )}
 
                 <Button
                     variant="secondary"
@@ -144,14 +268,16 @@ function ProductContent() {
                     <ArrowLeft className="h-6 w-6" />
                 </Button>
                 <div className="absolute top-4 right-4 flex gap-2">
-                    <Button
-                        variant="secondary"
-                        size="icon"
-                        className="rounded-full bg-black/50 text-white hover:bg-black/70 border-none"
-                        onClick={downloadImage}
-                    >
-                        <Download className="h-5 w-5" />
-                    </Button>
+                    {!isEditing && (
+                        <Button
+                            variant="secondary"
+                            size="icon"
+                            className="rounded-full bg-black/50 text-white hover:bg-black/70 border-none"
+                            onClick={() => downloadImage(displayImages[0])} // Just download first one by default from icon
+                        >
+                            <Download className="h-5 w-5" />
+                        </Button>
+                    )}
                     <Button
                         variant="secondary"
                         size="icon"
@@ -313,7 +439,7 @@ function ProductContent() {
                 {/* Actions */}
                 <div className="flex gap-4 mt-4">
                     {isEditing ? (
-                        <Button className="w-full bg-[#d4af37] hover:bg-[#b5952f] text-black" onClick={handleSave}>
+                        <Button className="w-full bg-[#d4af37] hover:bg-[#b5952f] text-black" onClick={handleSave} disabled={editImages.length === 0}>
                             Save Changes
                         </Button>
                     ) : (

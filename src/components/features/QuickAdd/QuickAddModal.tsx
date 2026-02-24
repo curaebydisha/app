@@ -31,7 +31,7 @@ import { useProducts } from "@/context/ProductContext"
 export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
     const { addProduct } = useProducts()
     const [loading, setLoading] = useState(false)
-    const [imagePreview, setImagePreview] = useState<string | null>(null)
+    const [imagePreviews, setImagePreviews] = useState<string[]>([])
     const [currency, setCurrency] = useState("THB")
     const [price, setPrice] = useState("")
     const [exchangeRate, setExchangeRate] = useState("2.90") // Default THB rate
@@ -116,18 +116,24 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
     }, [open])
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (file) {
+        const files = Array.from(e.target.files || [])
+        files.forEach(file => {
             const reader = new FileReader()
             reader.onloadend = () => {
-                setImagePreview(reader.result as string)
+                setImagePreviews(prev => [...prev, reader.result as string])
             }
             reader.readAsDataURL(file)
-        }
+        })
+        // Reset input so the same file can be selected again if needed
+        e.target.value = ""
+    }
+
+    const removeImage = (index: number) => {
+        setImagePreviews(prev => prev.filter((_, i) => i !== index))
     }
 
     const handleSave = async () => {
-        if (!price || !imagePreview) return // Basic validation
+        if (!price || imagePreviews.length === 0) return // Basic validation
         setLoading(true)
 
         // Simulate async operation or image upload
@@ -138,7 +144,8 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
         const priceInr = (priceNum * rateNum).toFixed(2)
 
         addProduct({
-            image: imagePreview,
+            image: imagePreviews[0], // Keep for backward compatibility 
+            images: imagePreviews,
             price,
             currency,
             priceInr,
@@ -156,7 +163,7 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
         setLoading(false)
         onOpenChange(false)
         // Reset form
-        setImagePreview(null)
+        setImagePreviews([])
         setPrice("")
         setStoreName("")
         setSellerMobile("")
@@ -183,24 +190,37 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
                     {/* Image Input */}
                     <div className="flex flex-col items-center justify-center gap-4">
                         <div
-                            className="relative flex h-48 w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/5 transition-colors overflow-hidden"
+                            className={`relative flex ${imagePreviews.length > 0 ? "h-24 justify-start items-center overflow-x-auto p-2 gap-2" : "h-48 justify-center items-center flex-col"} w-full rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/5 transition-colors`}
                         >
-                            {imagePreview ? (
-                                <div className="group relative h-full w-full cursor-pointer" onClick={() => document.getElementById("camera-input")?.click()}>
-                                    <img
-                                        src={imagePreview}
-                                        alt="Preview"
-                                        className="h-full w-full object-cover"
-                                    />
-                                    <div className="absolute inset-0 flex items-center justify-center gap-4 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                                        <Button type="button" size="icon" variant="secondary" onClick={(e) => { e.stopPropagation(); document.getElementById("camera-input")?.click(); }}>
-                                            <Camera className="h-4 w-4" />
-                                        </Button>
-                                        <Button type="button" size="icon" variant="secondary" onClick={(e) => { e.stopPropagation(); document.getElementById("gallery-input")?.click(); }}>
-                                            <Upload className="h-4 w-4" />
-                                        </Button>
+                            {imagePreviews.length > 0 ? (
+                                <>
+                                    {imagePreviews.map((preview, index) => (
+                                        <div key={index} className="group relative h-20 w-20 shrink-0 rounded-md overflow-hidden border border-border">
+                                            <img
+                                                src={preview}
+                                                alt={`Preview ${index + 1}`}
+                                                className="h-full w-full object-cover"
+                                            />
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                                                <Button
+                                                    type="button"
+                                                    size="icon"
+                                                    variant="destructive"
+                                                    className="h-8 w-8 rounded-full"
+                                                    onClick={(e) => { e.stopPropagation(); removeImage(index); }}
+                                                >
+                                                    <Upload className="h-4 w-4 rotate-45" /> {/* Use as a cross/delete icon placeholder for now, or X */}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {/* Add More Button */}
+                                    <div className="flex h-20 w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed border-muted-foreground/25 hover:bg-muted/10 transition-colors cursor-pointer"
+                                        onClick={() => document.getElementById("gallery-input")?.click()}>
+                                        <Upload className="h-6 w-6 text-muted-foreground" />
+                                        <span className="text-[10px] text-muted-foreground">Add</span>
                                     </div>
-                                </div>
+                                </>
                             ) : (
                                 <div className="flex h-full w-full">
                                     <div
@@ -231,6 +251,7 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
                                 id="gallery-input"
                                 type="file"
                                 accept="image/*"
+                                multiple
                                 className="hidden"
                                 onChange={handleImageChange}
                             />
@@ -385,9 +406,9 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
                 </div>
 
                 <Button
-                    className="w-full bg-[#d4af37] hover:bg-[#b5952f] text-black font-semibold h-12 text-lg"
+                    className="w-full bg-[#d4af37] hover:bg-[#b5952f] text-black font-semibold h-12 text-lg shrink-0 mb-4"
                     onClick={handleSave}
-                    disabled={loading || !imagePreview || !price}
+                    disabled={loading || imagePreviews.length === 0 || !price}
                 >
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save Product"}
                 </Button>

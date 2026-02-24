@@ -5,7 +5,8 @@ import { supabase } from "@/lib/supabase"
 
 export type Product = {
     id: string
-    image: string
+    image: string // Kept for backwards compatibility / primary image
+    images: string[] // New array for multiple images
     price: string
     currency: string
     priceInr: string
@@ -104,23 +105,36 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
 
             if (data) {
                 // Map DB columns to our frontend type
-                const mapped: Product[] = data.map(item => ({
-                    id: item.id,
-                    image: item.image_url, // Map image_url to image
-                    price: item.price?.toString() || "",
-                    currency: item.currency,
-                    priceInr: item.price_inr?.toString() || "",
-                    exchangeRate: item.exchange_rate,
-                    storeName: item.store_name,
-                    sellerMobile: item.seller_mobile,
-                    quantity: item.quantity || 1,
-                    sizes: item.sizes,
-                    sellingPrice: item.selling_price?.toString() || "",
-                    location: item.location,
-                    name: item.name,
-                    notes: item.notes,
-                    timestamp: new Date(item.created_at).getTime()
-                }))
+                const mapped: Product[] = data.map(item => {
+                    let parsedImages: string[] = []
+                    try {
+                        parsedImages = JSON.parse(item.image_url)
+                        if (!Array.isArray(parsedImages)) {
+                            parsedImages = item.image_url ? [item.image_url] : []
+                        }
+                    } catch {
+                        parsedImages = item.image_url ? [item.image_url] : []
+                    }
+
+                    return {
+                        id: item.id,
+                        image: parsedImages.length > 0 ? parsedImages[0] : item.image_url, // First image as primary
+                        images: parsedImages,
+                        price: item.price?.toString() || "",
+                        currency: item.currency,
+                        priceInr: item.price_inr?.toString() || "",
+                        exchangeRate: item.exchange_rate,
+                        storeName: item.store_name,
+                        sellerMobile: item.seller_mobile,
+                        quantity: item.quantity || 1,
+                        sizes: item.sizes,
+                        sellingPrice: item.selling_price?.toString() || "",
+                        location: item.location,
+                        name: item.name,
+                        notes: item.notes,
+                        timestamp: new Date(item.created_at).getTime()
+                    }
+                })
 
                 // Merge with pending uploads for display (give them temp IDs)
                 // We actually don't NEED to merge here if we optimistic update the state in addProduct
@@ -167,8 +181,32 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
         }
     }
 
+    const uploadImages = async (images: string[]): Promise<string[]> => {
+        const uploadedUrls: string[] = []
+        for (const img of images) {
+            if (!img || !img.startsWith('data:image')) {
+                uploadedUrls.push(img) // Already a URL
+                continue
+            }
+            try {
+                const url = await uploadImage(img)
+                if (url) uploadedUrls.push(url)
+            } catch (e) {
+                console.error("Failed to upload an image", e)
+            }
+        }
+        return uploadedUrls
+    }
+
     const addProductToSupabase = async (product: Omit<Product, "id" | "timestamp">) => {
-        const imageUrl = await uploadImage(product.image)
+        let finalImages: string[] = []
+
+        // Handle migration case where old code might pass `image` but not `images`
+        const imagesToUpload = product.images?.length > 0 ? product.images : (product.image ? [product.image] : [])
+        finalImages = await uploadImages(imagesToUpload)
+
+        const mainImageUrl = finalImages.length > 0 ? finalImages[0] : ""
+        const stringifiedImages = JSON.stringify(finalImages)
 
         const row = {
             name: product.name,
@@ -182,7 +220,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
             sizes: product.sizes,
             selling_price: parseFloat(product.sellingPrice || "0"),
             notes: product.notes,
-            image_url: imageUrl || "",
+            image_url: stringifiedImages, // Save as JSON array for new implementation
             location: product.location,
         }
 
@@ -244,8 +282,14 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
             if (updates.sellingPrice !== undefined) row.selling_price = parseFloat(updates.sellingPrice)
             if (updates.notes !== undefined) row.notes = updates.notes
             if (updates.location !== undefined) row.location = updates.location
-            // image update not implemented here yet (requires file upload), but if we had valid URL:
-            if (updates.image !== undefined) row.image_url = updates.image
+            // Upload new images if they are base64
+            if (updates.images !== undefined) {
+                const editedImages = await uploadImages(updates.images)
+                row.image_url = JSON.stringify(editedImages)
+            } else if (updates.image !== undefined) {
+                // Fallback for old single image update if it ever happens
+                row.image_url = JSON.stringify([updates.image])
+            }
 
             const { error } = await supabase.from('products').update(row).eq('id', id)
             if (error) throw error
