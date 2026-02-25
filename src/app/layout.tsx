@@ -43,7 +43,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              // Aggressive PWA Cache Nuke V2
+              // Silently clear PWA caches on load
               if ('caches' in window) {
                 caches.keys().then(function(cacheNames) {
                   cacheNames.forEach(function(cacheName) {
@@ -57,12 +57,6 @@ export default function RootLayout({
                     registration.unregister();
                   }
                 });
-              }
-              // Force clear any broken app router state
-              sessionStorage.clear();
-              
-              if (!window.location.search.includes('v=nuke2')) {
-                window.location.replace(window.location.pathname + '?v=nuke2');
               }
             `,
           }}
