@@ -139,9 +139,13 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
                 })
 
                 // Merge with pending uploads for display (give them temp IDs)
-                // We actually don't NEED to merge here if we optimistic update the state in addProduct
-                // But it's good to ensure they persist across reloads
-                const pending = JSON.parse(localStorage.getItem("pending_uploads") || "[]")
+                let pending = []
+                try {
+                    const raw = localStorage.getItem("pending_uploads")
+                    if (raw) pending = JSON.parse(raw)
+                } catch {
+                    localStorage.removeItem("pending_uploads")
+                }
                 const pendingMapped: Product[] = pending.map((p: any, i: number) => ({
                     ...p,
                     id: `temp-${Date.now()}-${i}`,
@@ -150,8 +154,9 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
 
                 setProducts([...pendingMapped, ...mapped])
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error("Error fetching products:", e)
+            alert("Fetch failed: " + (e.message || String(e)))
         } finally {
             setLoading(false)
         }

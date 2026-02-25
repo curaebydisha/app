@@ -31,7 +31,7 @@ export default function Home() {
     <div className="min-h-screen pb-20 p-4 font-[family-name:var(--font-geist-sans)]">
       <header className="flex flex-col gap-4 mb-6 sticky top-0 bg-background/95 backdrop-blur-md z-10 py-4 -mx-4 px-4 border-b transition-all">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#d4af37]">Curae <span className="text-xs text-muted-foreground font-normal">v1.2.1</span></h1>
+          <h1 className="text-2xl font-bold text-[#d4af37]">Curae <span className="text-xs text-muted-foreground font-normal">v1.2.2</span></h1>
           <OwnerProfileModal>
             <div className="h-8 w-8 rounded-full overflow-hidden border border-[#d4af37] cursor-pointer ring-2 ring-offset-2 ring-[#d4af37]">
               <img src="/app/owner.jpg" alt="Profile" className="h-full w-full object-cover" />
