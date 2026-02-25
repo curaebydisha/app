@@ -1,17 +1,6 @@
 import type { NextConfig } from "next";
 
-import withPWAInit from "@ducanh2912/next-pwa";
-
-const withPWA = withPWAInit({
-  dest: "public",
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: false,
-  reloadOnOnline: true,
-  disable: false, // Enable even in dev to test
-  workboxOptions: {
-    disableDevLogs: true,
-  },
-});
+// PWA disabled to prevent old chunk caching issues
 
 const nextConfig: NextConfig = {
   output: 'export',
@@ -23,4 +12,4 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true } // Required for static export if using next/image
 };
 
-export default withPWA(nextConfig);
+export default nextConfig;
