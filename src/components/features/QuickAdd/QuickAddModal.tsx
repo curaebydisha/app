@@ -24,11 +24,12 @@ import { useState, useEffect } from "react"
 interface QuickAddModalProps {
     open: boolean
     onOpenChange: (open: boolean) => void
+    initialData?: Partial<Product>
 }
 
-import { useProducts } from "@/context/ProductContext"
+import { useProducts, Product } from "@/context/ProductContext"
 
-export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
+export function QuickAddModal({ open, onOpenChange, initialData }: QuickAddModalProps) {
     const { addProduct } = useProducts()
     const [loading, setLoading] = useState(false)
     const [imagePreviews, setImagePreviews] = useState<string[]>([])
@@ -78,42 +79,73 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
     // Auto-detect location on open
     useEffect(() => {
         if (open) {
-            setLocating(true)
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    async (position) => {
-                        const { latitude, longitude } = position.coords
-                        setLocation({
-                            lat: latitude,
-                            lng: longitude
-                        })
+            if (initialData) {
+                setCurrency(initialData.currency || "THB")
+                setPrice(initialData.price || "")
+                setExchangeRate((initialData.exchangeRate || 3.0).toString())
+                setStoreName(initialData.storeName || "")
+                setProductName(initialData.name || "")
+                setNotes(initialData.notes || "")
+                setSellerMobile(initialData.sellerMobile || "")
+                setQuantity(initialData.quantity?.toString() || "1")
+                setSizes(initialData.sizes || "")
 
-                        // Reverse geocoding using OpenStreetMap (Nominatim)
-                        try {
-                            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
-                            const data = await response.json()
-                            if (data && data.name) {
-                                setStoreName(data.name)
-                            } else if (data && data.address) {
-                                // Fallback to building name, road, or suburb
-                                setStoreName(data.address.building || data.address.shop || data.address.road || data.address.suburb || "")
-                            }
-                        } catch (error) {
-                            console.error("Error reverse geocoding:", error)
-                        }
-
-                        setLocating(false)
-                    },
-                    (error) => {
-                        console.error("Error getting location", error)
-                        setLocating(false)
+                // Estimate markup if possible
+                if (initialData.price && initialData.sellingPrice) {
+                    const cost = parseFloat(initialData.price) * (initialData.exchangeRate || 1)
+                    const sell = parseFloat(initialData.sellingPrice)
+                    if (cost > 0) {
+                        const mark = ((sell - cost) / cost) * 100
+                        setMarkup(mark.toFixed(0))
+                    } else {
+                        setMarkup("120")
                     }
-                )
-            } else {
+                } else {
+                    setMarkup("120")
+                }
+
+                setSellingPrice(initialData.sellingPrice || "")
+                setLocation(initialData.location)
+                setImagePreviews([])
                 setLocating(false)
+            } else {
+                setLocating(true)
+                if ("geolocation" in navigator) {
+                    navigator.geolocation.getCurrentPosition(
+                        async (position) => {
+                            const { latitude, longitude } = position.coords
+                            setLocation({
+                                lat: latitude,
+                                lng: longitude
+                            })
+
+                            // Reverse geocoding using OpenStreetMap (Nominatim)
+                            try {
+                                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
+                                const data = await response.json()
+                                if (data && data.name) {
+                                    setStoreName(data.name)
+                                } else if (data && data.address) {
+                                    // Fallback to building name, road, or suburb
+                                    setStoreName(data.address.building || data.address.shop || data.address.road || data.address.suburb || "")
+                                }
+                            } catch (error) {
+                                console.error("Error reverse geocoding:", error)
+                            }
+
+                            setLocating(false)
+                        },
+                        (error) => {
+                            console.error("Error getting location", error)
+                            setLocating(false)
+                        }
+                    )
+                } else {
+                    setLocating(false)
+                }
             }
         }
-    }, [open])
+    }, [open, initialData])
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || [])

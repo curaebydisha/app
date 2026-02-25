@@ -5,9 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, MapPin, Share2, Trash2, Edit2, X, Download, Maximize2, Camera, Upload, ChevronLeft, ChevronRight } from "lucide-react"
+import { ArrowLeft, MapPin, Share2, Trash2, Edit2, X, Download, Maximize2, Camera, Upload, ChevronLeft, ChevronRight, Copy } from "lucide-react"
 import { useState, useEffect, Suspense } from "react"
 import { Product } from "@/context/ProductContext"
+import { QuickAddModal } from "@/components/features/QuickAdd/QuickAddModal"
 
 function ProductContent() {
     const searchParams = useSearchParams()
@@ -18,6 +19,7 @@ function ProductContent() {
     const [editForm, setEditForm] = useState<Partial<Product>>({})
     const [showFullImage, setShowFullImage] = useState(false)
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
+    const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false)
 
     const product = products.find(p => p.id === id)
 
@@ -120,6 +122,13 @@ function ProductContent() {
 
     return (
         <div className="min-h-screen bg-background pb-20 font-[family-name:var(--font-geist-sans)]">
+            {/* Quick Add Modal for Duplicating */}
+            <QuickAddModal
+                open={isDuplicateModalOpen}
+                onOpenChange={setIsDuplicateModalOpen}
+                initialData={product}
+            />
+
             {/* Full Screen Image Modal */}
             {showFullImage && (
                 <div className="fixed inset-0 z-50 bg-black flex flex-col justify-center items-center">
@@ -269,14 +278,24 @@ function ProductContent() {
                 </Button>
                 <div className="absolute top-4 right-4 flex gap-2">
                     {!isEditing && (
-                        <Button
-                            variant="secondary"
-                            size="icon"
-                            className="rounded-full bg-black/50 text-white hover:bg-black/70 border-none"
-                            onClick={() => downloadImage(displayImages[0])} // Just download first one by default from icon
-                        >
-                            <Download className="h-5 w-5" />
-                        </Button>
+                        <>
+                            <Button
+                                variant="secondary"
+                                size="icon"
+                                className="rounded-full bg-black/50 text-white hover:bg-black/70 border-none"
+                                onClick={() => setIsDuplicateModalOpen(true)}
+                            >
+                                <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                size="icon"
+                                className="rounded-full bg-black/50 text-white hover:bg-black/70 border-none"
+                                onClick={() => downloadImage(displayImages[0])} // Just download first one by default from icon
+                            >
+                                <Download className="h-5 w-5" />
+                            </Button>
+                        </>
                     )}
                     <Button
                         variant="secondary"
