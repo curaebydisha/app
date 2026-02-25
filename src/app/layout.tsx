@@ -50,6 +50,10 @@ export default function RootLayout({
                   }
                 });
               }
+              // Force-bust iOS PWA cache loop
+              if (!window.location.search.includes('v=clear')) {
+                window.location.replace(window.location.pathname + '?v=clear');
+              }
             `,
           }}
         />
