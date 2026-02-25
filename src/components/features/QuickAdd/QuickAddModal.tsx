@@ -34,7 +34,7 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
     const [imagePreviews, setImagePreviews] = useState<string[]>([])
     const [currency, setCurrency] = useState("THB")
     const [price, setPrice] = useState("")
-    const [exchangeRate, setExchangeRate] = useState("2.90") // Default THB rate
+    const [exchangeRate, setExchangeRate] = useState("3.0") // Default THB rate
     const [storeName, setStoreName] = useState("")
     const [productName, setProductName] = useState("")
     const [notes, setNotes] = useState("")

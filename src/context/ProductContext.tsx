@@ -108,9 +108,11 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
                 const mapped: Product[] = data.map(item => {
                     let parsedImages: string[] = []
                     try {
-                        parsedImages = JSON.parse(item.image_url)
-                        if (!Array.isArray(parsedImages)) {
-                            parsedImages = item.image_url ? [item.image_url] : []
+                        if (item.image_url) {
+                            parsedImages = JSON.parse(item.image_url)
+                            if (!Array.isArray(parsedImages)) {
+                                parsedImages = [item.image_url]
+                            }
                         }
                     } catch {
                         parsedImages = item.image_url ? [item.image_url] : []
@@ -123,8 +125,8 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
                         price: item.price?.toString() || "",
                         currency: item.currency,
                         priceInr: item.price_inr?.toString() || "",
-                        exchangeRate: item.exchange_rate,
-                        storeName: item.store_name,
+                        exchangeRate: item.currency === "THB" ? 3.0 : (item.exchange_rate || 1.0),
+                        storeName: item.store_name || "Unknown Store",
                         sellerMobile: item.seller_mobile,
                         quantity: item.quantity || 1,
                         sizes: item.sizes,
