@@ -10,17 +10,16 @@ if (!supabaseUrl || !supabaseKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
     global: {
-        fetch: (...args) => {
-            // Force no-store to bypass aggressive iOS Safari caching
-            return fetch(args[0], {
-                ...args[1],
+        fetch: (url, options) => {
+            const headers = new Headers(options?.headers);
+            headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+            headers.set('Pragma', 'no-cache');
+            headers.set('Expires', '0');
+
+            return fetch(url, {
+                ...options,
                 cache: 'no-store',
-                headers: {
-                    ...args[1]?.headers,
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache',
-                    'Expires': '0'
-                }
+                headers
             })
         }
     }
