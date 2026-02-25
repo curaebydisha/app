@@ -8,4 +8,20 @@ if (!supabaseUrl || !supabaseKey) {
     throw new Error("Missing Supabase environment variables")
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey)
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+    global: {
+        fetch: (...args) => {
+            // Force no-store to bypass aggressive iOS Safari caching
+            return fetch(args[0], {
+                ...args[1],
+                cache: 'no-store',
+                headers: {
+                    ...args[1]?.headers,
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            })
+        }
+    }
+})
