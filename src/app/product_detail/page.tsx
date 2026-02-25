@@ -456,14 +456,16 @@ function ProductContent() {
                                         product.name,
                                         `Price: ₹${product.sellingPrice || product.priceInr}`,
                                         product.sizes ? `Size: ${product.sizes}` : null,
-                                        product.notes ? `${product.notes}` : null
+                                        product.notes ? `${product.notes}` : null,
+                                        `\nView all images & details here:`,
+                                        shareUrl
                                     ]
                                     const text = textParts.filter(Boolean).join('\n').trim()
 
                                     try {
                                         // Try to share Image + Text (Best for WhatsApp)
                                         if (navigator.share) {
-                                            const response = await fetch(product.image)
+                                            const response = await fetch(displayImages[0])
                                             const blob = await response.blob()
                                             const file = new File([blob], "product.jpg", { type: blob.type })
 
@@ -485,8 +487,7 @@ function ProductContent() {
                                     if (navigator.share) {
                                         navigator.share({
                                             title: product.name,
-                                            text: `${text}\nCheck it out here:`,
-                                            url: shareUrl,
+                                            text: text, // URL is already in the text now
                                         })
                                     } else {
                                         // Fallback Clipboard
