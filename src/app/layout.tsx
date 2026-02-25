@@ -43,6 +43,14 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              // Aggressive PWA Cache Nuke V2
+              if ('caches' in window) {
+                caches.keys().then(function(cacheNames) {
+                  cacheNames.forEach(function(cacheName) {
+                    caches.delete(cacheName);
+                  });
+                });
+              }
               if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.getRegistrations().then(function(registrations) {
                   for(let registration of registrations) {
@@ -50,9 +58,11 @@ export default function RootLayout({
                   }
                 });
               }
-              // Force-bust iOS PWA cache loop
-              if (!window.location.search.includes('v=clear')) {
-                window.location.replace(window.location.pathname + '?v=clear');
+              // Force clear any broken app router state
+              sessionStorage.clear();
+              
+              if (!window.location.search.includes('v=nuke2')) {
+                window.location.replace(window.location.pathname + '?v=nuke2');
               }
             `,
           }}
