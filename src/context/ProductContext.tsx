@@ -298,8 +298,15 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
                 row.image_url = JSON.stringify([updates.image])
             }
 
-            const { error } = await supabase.from('products').update(row).eq('id', id)
-            if (error) throw error
+            console.log("Updating product in Supabase:", id, row)
+
+            const { error, data } = await supabase.from('products').update(row).eq('id', id).select()
+            if (error) {
+                console.error("Supabase update error:", error)
+                throw error
+            }
+
+            console.log("Supabase update success:", data)
 
             setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p))
         } catch (e) {

@@ -27,9 +27,14 @@ export function ProductCard({ product, selectionMode, isSelected, onToggleSelect
     }
 
     const handleClick = (e: React.MouseEvent) => {
+        // Prevent selection if quantity is 0
         if (selectionMode && onToggleSelect) {
             e.preventDefault()
-            onToggleSelect(product.id)
+            e.stopPropagation() // Prevent link navigation
+
+            if (product.quantity > 0) {
+                onToggleSelect(product.id)
+            }
         }
     }
 
@@ -49,11 +54,18 @@ export function ProductCard({ product, selectionMode, isSelected, onToggleSelect
                     />
 
                     {/* Selection Indicator */}
-                    {selectionMode && (
+                    {selectionMode && product.quantity > 0 && (
                         <div className="absolute top-2 left-2 z-10">
                             <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${isSelected ? 'bg-[#d4af37] border-[#d4af37]' : 'bg-white/50 border-white text-transparent'}`}>
                                 <CheckCircle2 className="w-4 h-4" color={isSelected ? "white" : "transparent"} />
                             </div>
+                        </div>
+                    )}
+
+                    {/* Out of Stock Overlay */}
+                    {product.quantity <= 0 && (
+                        <div className="absolute inset-0 bg-black/60 z-20 flex items-center justify-center">
+                            <span className="bg-red-600 text-white font-bold px-3 py-1 rounded-sm text-sm tracking-wider rotate-[-12deg] shadow-lg border border-red-800">SOLD OUT</span>
                         </div>
                     )}
 
