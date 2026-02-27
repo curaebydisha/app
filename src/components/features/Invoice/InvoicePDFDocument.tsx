@@ -73,7 +73,7 @@ export function InvoicePDFDocument({ invoiceId, customerName, customerMobile, it
             <div
                 ref={printRef}
                 className="bg-white border rounded-xl overflow-hidden shadow-sm printable-invoice"
-                style={{ padding: '2rem', minHeight: '600px', fontFamily: 'sans-serif', color: '#000' }}
+                style={{ padding: '3rem', minHeight: '600px', fontFamily: 'sans-serif', color: '#000' }}
             >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #eee', paddingBottom: '1rem', marginBottom: '2rem' }}>
                     <div>
