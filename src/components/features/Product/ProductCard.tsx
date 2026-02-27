@@ -4,23 +4,69 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Product } from "@/context/ProductContext"
 import Link from "next/link"
 
+import { CheckCircle2, Zap } from "lucide-react"
+
 interface ProductCardProps {
     product: Product
+    selectionMode?: boolean
+    isSelected?: boolean
+    onToggleSelect?: (id: string) => void
+    onDirectSale?: (product: Product) => void
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, selectionMode, isSelected, onToggleSelect, onDirectSale }: ProductCardProps) {
     const hasSellingPrice = product.sellingPrice && parseFloat(product.sellingPrice) > 0
     const displayPrice = hasSellingPrice ? product.sellingPrice : product.priceInr
 
+    const handleDirectSale = (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (onDirectSale && product.quantity > 0) {
+            onDirectSale(product)
+        }
+    }
+
+    const handleClick = (e: React.MouseEvent) => {
+        if (selectionMode && onToggleSelect) {
+            e.preventDefault()
+            onToggleSelect(product.id)
+        }
+    }
+
+    const Wrap = selectionMode ? 'div' : Link
+    const wrapProps: any = selectionMode
+        ? { onClick: handleClick, className: "block h-full cursor-pointer" }
+        : { href: `/product_detail?id=${product.id}`, className: "block h-full" }
+
     return (
-        <Link href={`/product_detail?id=${product.id}`} className="block h-full">
-            <Card className="overflow-hidden border-none shadow-sm h-full flex flex-col">
+        <Wrap {...wrapProps}>
+            <Card className={`overflow-hidden border-2 transition-all shadow-sm h-full flex flex-col ${isSelected ? 'border-[#d4af37] ring-2 ring-[#d4af37]/20' : 'border-transparent'}`}>
                 <div className="aspect-[4/5] w-full relative bg-muted group">
                     <img
                         src={product.image}
                         alt={product.name}
-                        className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105"
+                        className={`absolute inset-0 w-full h-full object-cover transition-transform ${selectionMode ? '' : 'group-hover:scale-105'} ${isSelected ? 'opacity-80' : ''}`}
                     />
+
+                    {/* Selection Indicator */}
+                    {selectionMode && (
+                        <div className="absolute top-2 left-2 z-10">
+                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${isSelected ? 'bg-[#d4af37] border-[#d4af37]' : 'bg-white/50 border-white text-transparent'}`}>
+                                <CheckCircle2 className="w-4 h-4" color={isSelected ? "white" : "transparent"} />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Quick Direct Sale Button */}
+                    {!selectionMode && product.quantity > 0 && onDirectSale && (
+                        <button
+                            onClick={handleDirectSale}
+                            className="absolute top-2 right-2 z-10 w-8 h-8 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center backdrop-blur-sm transition-colors"
+                            title="Mark 1 Sold (Direct)"
+                        >
+                            <Zap className="w-4 h-4 text-[#d4af37]" />
+                        </button>
+                    )}
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-8 flex items-end justify-between">
                         <div>
                             <p className="text-white font-bold text-lg">₹{displayPrice}</p>
@@ -45,6 +91,6 @@ export function ProductCard({ product }: ProductCardProps) {
                     </p>
                 </CardContent>
             </Card>
-        </Link>
+        </Wrap>
     )
 }

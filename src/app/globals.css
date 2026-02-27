@@ -123,3 +123,34 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+
+  /* Hide all generic nextjs layout wrappers and UI elements when printing */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Only show the invoice container and its children */
+  .printable-invoice,
+  .printable-invoice * {
+    visibility: visible;
+  }
+
+  /* Force the invoice to take full absolute screen space immediately without margins */
+  .printable-invoice {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  @page {
+    margin: 0;
+    size: A4;
+  }
+}

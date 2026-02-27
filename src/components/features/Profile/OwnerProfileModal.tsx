@@ -40,6 +40,13 @@ export function OwnerProfileModal({ children }: { children: React.ReactNode }) {
                         </Button>
                     </Link>
 
+                    <Link href="/accounts" className="w-full">
+                        <Button variant="outline" className="w-full gap-2 border-[#d4af37] text-black hover:text-[#b08d24] hover:bg-[#d4af37]/10">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>
+                            Accounting & Logs
+                        </Button>
+                    </Link>
+
                     <Link href="https://wa.me/919819754421" target="_blank" className="w-full">
                         <Button className="w-full gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white border-none">
                             <Phone className="h-5 w-5" /> Chat on WhatsApp

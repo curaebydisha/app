@@ -31,6 +31,7 @@ export const viewport: Viewport = {
 };
 
 import { ProductProvider } from "@/context/ProductContext";
+import { SalesProvider } from "@/context/SalesContext";
 
 export default function RootLayout({
   children,
@@ -66,7 +67,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ProductProvider>
-          {children}
+          <SalesProvider>
+            {children}
+          </SalesProvider>
         </ProductProvider>
       </body>
     </html>
