@@ -128,7 +128,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
                         exchangeRate: item.currency === "THB" ? 3.0 : (item.exchange_rate || 1.0),
                         storeName: item.store_name || "Unknown Store",
                         sellerMobile: item.seller_mobile,
-                        quantity: item.quantity || 1,
+                        quantity: item.quantity ?? 1,
                         sizes: item.sizes,
                         sellingPrice: item.selling_price?.toString() || "",
                         location: item.location,
