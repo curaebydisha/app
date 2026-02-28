@@ -10,18 +10,18 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const [error, setError] = useState(false)
 
     const pathname = usePathname()
-    // In Next.js static exports, sometimes pathname is just /app/ or /app/product_detail
-    // If it's the product detail page, we always want to bypass
-    const isPublicRoute = pathname?.includes('/product_detail')
 
     useEffect(() => {
         // Only run on client
+        const currentPath = window.location.pathname
+        const isPublicRoute = currentPath.includes('/product_detail')
+
         const storedAuth = localStorage.getItem("admin_authenticated")
         if (storedAuth === "true" || isPublicRoute) {
             setIsAuthenticated(true)
         }
         setIsLoading(false)
-    }, [isPublicRoute])
+    }, [pathname])
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault()
