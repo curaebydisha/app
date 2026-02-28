@@ -46,22 +46,49 @@ export default function SharePage() {
                     .eq('id', currentId)
                     .single()
 
-                if (data) {
+                let finalData = data
+
+                // Automatic Fallback: If Supabase client fails due to ISP Network Drop (TypeError), try manual proxy fetch
+                if (!finalData && error?.message?.includes("Failed to fetch")) {
+                    console.warn("Direct connection blocked. Falling back to explicit proxy fetch...")
+                    try {
+                        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+                        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+                        const rawUrl = `${supabaseUrl}/rest/v1/products?select=id,name,image_url,selling_price,notes,quantity,sizes&id=eq.${currentId}&apikey=${supabaseKey}`
+                        const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(rawUrl)}`
+
+                        const res = await fetch(proxyUrl)
+                        if (res.ok) {
+                            const proxyData = await res.json()
+                            if (proxyData && proxyData.length > 0) {
+                                finalData = proxyData[0]
+                                // Clear the error since proxy succeeded
+                                setFetchError(null)
+                            }
+                        } else {
+                            throw new Error(`Proxy returned ${res.status}`)
+                        }
+                    } catch (proxyErr) {
+                        console.error("Proxy fallback also failed:", proxyErr)
+                    }
+                }
+
+                if (finalData) {
                     let parsedImages: string[] = []
                     try {
-                        parsedImages = JSON.parse(data.image_url)
+                        parsedImages = JSON.parse(finalData.image_url)
                         if (!Array.isArray(parsedImages)) {
-                            parsedImages = data.image_url ? [data.image_url] : []
+                            parsedImages = finalData.image_url ? [finalData.image_url] : []
                         }
                     } catch {
-                        parsedImages = data.image_url ? [data.image_url] : []
+                        parsedImages = finalData.image_url ? [finalData.image_url] : []
                     }
 
                     setProduct({
-                        ...data,
-                        images: parsedImages.length > 0 ? parsedImages : (data.image_url ? [data.image_url] : [])
+                        ...finalData,
+                        images: parsedImages.length > 0 ? parsedImages : (finalData.image_url ? [finalData.image_url] : [])
                     } as PublicProduct)
-                } else if (error) {
+                } else if (error && !finalData) {
                     console.error("Supabase fetch error:", error)
                     setFetchError("Failed to load product. " + (error.message || "Unknown error"))
                 }
