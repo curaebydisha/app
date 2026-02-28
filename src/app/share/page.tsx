@@ -38,12 +38,16 @@ export default function SharePage() {
         }
 
         async function load() {
+            const controller = new AbortController()
+            const id = setTimeout(() => controller.abort(), 10000) // 10 second hard timeout
+
             try {
                 // Select ONLY public fields to ensure data safety
                 const { data, error } = await supabase
                     .from('products')
                     .select('id, name, image_url, selling_price, notes, quantity, sizes')
                     .eq('id', currentId)
+                    .abortSignal(controller.signal)
                     .single()
 
                 let finalData = data
@@ -57,7 +61,7 @@ export default function SharePage() {
                         const rawUrl = `${supabaseUrl}/rest/v1/products?select=id,name,image_url,selling_price,notes,quantity,sizes&id=eq.${currentId}&apikey=${supabaseKey}`
                         const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}`
 
-                        const res = await fetch(proxyUrl)
+                        const res = await fetch(proxyUrl, { signal: controller.signal })
                         if (res.ok) {
                             const proxyData = await res.json()
                             if (proxyData && proxyData.length > 0) {
@@ -68,8 +72,11 @@ export default function SharePage() {
                         } else {
                             throw new Error(`Proxy returned ${res.status}`)
                         }
-                    } catch (proxyErr) {
+                    } catch (proxyErr: any) {
                         console.error("Proxy fallback also failed:", proxyErr)
+                        if (proxyErr.name === 'AbortError') {
+                            throw new Error("Connection timed out. The network is too slow or blocking requests.")
+                        }
                     }
                 }
 
@@ -94,8 +101,13 @@ export default function SharePage() {
                 }
             } catch (err: any) {
                 console.error("Unexpected error:", err)
-                setFetchError("Network error. Please check your internet connection or disable ad-blockers.")
+                if (err.name === 'AbortError' || err.message?.includes('timed out')) {
+                    setFetchError("Connection timed out. Your network (Jio/Airtel) may be blocking the database. Try switching to Wi-Fi.")
+                } else {
+                    setFetchError("Network error. Please check your internet connection or disable ad-blockers.")
+                }
             } finally {
+                clearTimeout(id)
                 setLoading(false)
             }
         }
