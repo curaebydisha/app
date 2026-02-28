@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
+import { ProductProvider } from "@/context/ProductContext";
+import { SalesProvider } from "@/context/SalesContext";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
     const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -43,7 +45,15 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     if (isLoading) return <div className="min-h-screen bg-background flex items-center justify-center"></div>
 
     if (isAuthenticated) {
-        return <>{children}</>
+        // Only initialize heavy global state providers when fully authenticated
+        // This prevents the public /share or /product_detail pages from fetching the admin database on load
+        return (
+            <ProductProvider>
+                <SalesProvider>
+                    {children}
+                </SalesProvider>
+            </ProductProvider>
+        )
     }
 
     return (
