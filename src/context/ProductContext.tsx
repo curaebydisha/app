@@ -156,7 +156,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
             }
         } catch (e: any) {
             console.error("Error fetching products:", e)
-            alert("Fetch failed: " + (e.message || String(e)))
+            // Removed blocking alert() that freezes PWA rendering
         } finally {
             setLoading(false)
         }

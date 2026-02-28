@@ -86,7 +86,8 @@ export default function SharePage() {
             const url = window.URL.createObjectURL(blob)
             const link = document.createElement('a')
             link.href = url
-            link.download = `product-${product.name.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.jpg`
+            const safeName = (product.name || 'untitled').replace(/\s+/g, '-').toLowerCase()
+            link.download = `product-${safeName}-${Date.now()}.jpg`
             document.body.appendChild(link)
             link.click()
             document.body.removeChild(link)
@@ -97,6 +98,7 @@ export default function SharePage() {
     }
 
     const shareUrl = typeof window !== 'undefined' ? window.location.href : ''
+    const displayName = product.name || 'Untitled Product'
 
     return (
         <div className="min-h-screen bg-background font-[family-name:var(--font-geist-sans)] pb-10">
@@ -107,7 +109,7 @@ export default function SharePage() {
                         <div key={idx} className="min-w-full h-full snap-center relative">
                             <img
                                 src={img}
-                                alt={`${product.name} ${idx + 1}`}
+                                alt={`${displayName} ${idx + 1}`}
                                 className="h-full w-full object-cover"
                             />
                         </div>
@@ -136,7 +138,7 @@ export default function SharePage() {
             <div className="p-6 flex flex-col gap-6">
                 <div className="flex justify-between items-start">
                     <div>
-                        <h1 className="text-2xl font-bold mb-1">{product.name}</h1>
+                        <h1 className="text-2xl font-bold mb-1">{displayName}</h1>
                         {product.sizes && (
                             <div className="text-sm text-muted-foreground">Size: {product.sizes}</div>
                         )}
@@ -171,8 +173,8 @@ export default function SharePage() {
                     onClick={() => {
                         if (navigator.share) {
                             navigator.share({
-                                title: product.name,
-                                text: `Check out ${product.name} for ₹${product.selling_price || 0}`,
+                                title: displayName,
+                                text: `Check out ${displayName} for ₹${product.selling_price || 0}`,
                                 url: shareUrl
                             })
                         } else {
