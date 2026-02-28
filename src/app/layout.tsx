@@ -32,6 +32,7 @@ export const viewport: Viewport = {
 
 import { ProductProvider } from "@/context/ProductContext";
 import { SalesProvider } from "@/context/SalesContext";
+import { AuthGuard } from "@/components/features/Auth/AuthGuard";
 
 export default function RootLayout({
   children,
@@ -66,11 +67,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ProductProvider>
-          <SalesProvider>
-            {children}
-          </SalesProvider>
-        </ProductProvider>
+        <AuthGuard>
+          <ProductProvider>
+            <SalesProvider>
+              {children}
+            </SalesProvider>
+          </ProductProvider>
+        </AuthGuard>
       </body>
     </html>
   );
