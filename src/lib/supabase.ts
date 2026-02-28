@@ -18,9 +18,20 @@ const customFetch = async (url: RequestInfo | URL, options?: RequestInit): Promi
         if (err.name === 'TypeError' && typeof url === 'string') {
             console.warn("Direct connection blocked! Rerouting through proxy...", url)
             try {
-                // Prepend a reliable public proxy to bypass the telecom block
-                // Note: corsproxy.io requires url encoding
-                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`
+                // Public proxies strip custom headers for security. Fortunately, Supabase allows the `apikey` in the URL!
+                let proxyTarget = url
+
+                // Extract apikey from the headers Supabase tries to send
+                const headers = new Headers(options?.headers)
+                const apiKey = headers.get('apikey') || supabaseKey
+
+                if (apiKey) {
+                    const separator = proxyTarget.includes('?') ? '&' : '?'
+                    proxyTarget = `${proxyTarget}${separator}apikey=${apiKey}`
+                }
+
+                // api.codetabs.com is a reliable free CORS proxy that passes GET queries perfectly
+                const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(proxyTarget)}`
                 return await fetch(proxyUrl, options)
             } catch (proxyErr) {
                 console.error("Proxy also failed:", proxyErr)
