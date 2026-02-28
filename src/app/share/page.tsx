@@ -1,7 +1,6 @@
 "use client"
 
-import { useSearchParams } from "next/navigation"
-import { useEffect, useState, Suspense } from "react"
+import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { Download, Share2, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -20,25 +19,20 @@ type PublicProduct = {
     // Update: User said "nicer share with ... name, color, price, misc details".
 }
 
-function ShareContent() {
-    const searchParams = useSearchParams()
-    const id = searchParams.get('id')
+export default function SharePage() {
     const [product, setProduct] = useState<PublicProduct | null>(null)
     const [loading, setLoading] = useState(true)
     const [fetchError, setFetchError] = useState<string | null>(null)
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
     useEffect(() => {
-        let currentId = id;
+        if (typeof window === 'undefined') return;
 
-        // Fallback to native window.location.search if Next.js router drops it during static export hydration
-        if (!currentId && typeof window !== 'undefined') {
-            const params = new URLSearchParams(window.location.search);
-            currentId = params.get('id');
-        }
+        const params = new URLSearchParams(window.location.search);
+        const currentId = params.get('id');
 
         if (!currentId) {
-            setFetchError("Invalid product link.")
+            setFetchError("Invalid product link or missing ID.")
             setLoading(false)
             return;
         }
@@ -79,7 +73,7 @@ function ShareContent() {
             }
         }
         load()
-    }, [id])
+    }, [])
 
     if (loading) return <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4"><div className="w-8 h-8 border-4 border-[#d4af37] border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-muted-foreground animate-pulse">Loading Product...</p></div>
     if (fetchError) return <div className="min-h-screen bg-background flex flex-col items-center justify-center text-red-500 font-medium p-6 text-center">{fetchError}</div>
@@ -92,7 +86,7 @@ function ShareContent() {
             const url = window.URL.createObjectURL(blob)
             const link = document.createElement('a')
             link.href = url
-            link.download = `product-${product.name.replace(/\s+/g, '-').toLowerCase()}.jpg`
+            link.download = `product-${product.name.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.jpg`
             document.body.appendChild(link)
             link.click()
             document.body.removeChild(link)
@@ -196,13 +190,5 @@ function ShareContent() {
                 Shared via Curae
             </div>
         </div>
-    )
-}
-
-export default function SharePage() {
-    return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <ShareContent />
-        </Suspense>
     )
 }
