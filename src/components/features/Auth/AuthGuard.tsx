@@ -14,7 +14,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         // Only run on client
         const currentPath = window.location.pathname
-        const isPublicRoute = currentPath.includes('/product_detail')
+        const isPublicRoute = currentPath.includes('/product_detail') || currentPath.includes('/share')
 
         const storedAuth = localStorage.getItem("admin_authenticated")
         if (storedAuth === "true" || isPublicRoute) {
