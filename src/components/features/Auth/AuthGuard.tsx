@@ -7,6 +7,7 @@ import { SalesProvider } from "@/context/SalesContext";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
     const [isAuthenticated, setIsAuthenticated] = useState(false)
+    const [isPublicPath, setIsPublicPath] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
     const [pin, setPin] = useState("")
     const [error, setError] = useState(false)
@@ -18,9 +19,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         if (typeof window !== 'undefined') {
             const currentPath = window.location.pathname
             const isPublicRoute = currentPath.includes('/product_detail') || currentPath.includes('/share')
+            setIsPublicPath(isPublicRoute)
 
             const storedAuth = localStorage.getItem("admin_authenticated")
-            if (storedAuth === "true" || isPublicRoute) {
+            if (storedAuth === "true") {
                 setIsAuthenticated(true)
             }
         }
@@ -54,6 +56,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
                 </SalesProvider>
             </ProductProvider>
         )
+    }
+
+    if (isPublicPath) {
+        // Public routes bypass the PIN screen but do NOT get the admin global providers
+        return <>{children}</>
     }
 
     return (
