@@ -25,6 +25,7 @@ function ShareContent() {
     const id = searchParams.get('id')
     const [product, setProduct] = useState<PublicProduct | null>(null)
     const [loading, setLoading] = useState(true)
+    const [fetchError, setFetchError] = useState<string | null>(null)
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
     useEffect(() => {
@@ -37,6 +38,7 @@ function ShareContent() {
         }
 
         if (!currentId) {
+            setFetchError("Invalid product link.")
             setLoading(false)
             return;
         }
@@ -67,9 +69,11 @@ function ShareContent() {
                     } as PublicProduct)
                 } else if (error) {
                     console.error("Supabase fetch error:", error)
+                    setFetchError("Failed to load product. " + (error.message || "Unknown error"))
                 }
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Unexpected error:", err)
+                setFetchError("Network error. Please check your internet connection or disable ad-blockers.")
             } finally {
                 setLoading(false)
             }
@@ -78,6 +82,7 @@ function ShareContent() {
     }, [id])
 
     if (loading) return <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4"><div className="w-8 h-8 border-4 border-[#d4af37] border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-muted-foreground animate-pulse">Loading Product...</p></div>
+    if (fetchError) return <div className="min-h-screen bg-background flex flex-col items-center justify-center text-red-500 font-medium p-6 text-center">{fetchError}</div>
     if (!product) return <div className="min-h-screen bg-background flex flex-col items-center justify-center text-muted-foreground">Product not found or unavailable.</div>
 
     const downloadImage = async (imageUrl: string) => {
