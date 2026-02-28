@@ -21,9 +21,15 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             const isPublicRoute = currentPath.includes('/product_detail') || currentPath.includes('/share')
             setIsPublicPath(isPublicRoute)
 
-            const storedAuth = localStorage.getItem("admin_authenticated")
-            if (storedAuth === "true") {
-                setIsAuthenticated(true)
+            try {
+                const storedAuth = localStorage.getItem("admin_authenticated")
+                if (storedAuth === "true") {
+                    setIsAuthenticated(true)
+                }
+            } catch (err) {
+                // Mobile webviews (like Instagram, Safari Private Mode) may block localStorage access.
+                // Catching this prevents the entire page from fatally crashing on load.
+                console.warn("localStorage blocked by browser privacy settings.", err)
             }
         }
         setIsLoading(false)
