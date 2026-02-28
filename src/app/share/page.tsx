@@ -28,39 +28,57 @@ function ShareContent() {
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
     useEffect(() => {
-        if (!id) return;
+        let currentId = id;
+
+        // Fallback to native window.location.search if Next.js router drops it during static export hydration
+        if (!currentId && typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            currentId = params.get('id');
+        }
+
+        if (!currentId) {
+            setLoading(false)
+            return;
+        }
 
         async function load() {
-            // Select ONLY public fields to ensure data safety
-            const { data, error } = await supabase
-                .from('products')
-                .select('id, name, image_url, selling_price, notes, quantity, sizes')
-                .eq('id', id)
-                .single()
+            try {
+                // Select ONLY public fields to ensure data safety
+                const { data, error } = await supabase
+                    .from('products')
+                    .select('id, name, image_url, selling_price, notes, quantity, sizes')
+                    .eq('id', currentId)
+                    .single()
 
-            if (data) {
-                let parsedImages: string[] = []
-                try {
-                    parsedImages = JSON.parse(data.image_url)
-                    if (!Array.isArray(parsedImages)) {
+                if (data) {
+                    let parsedImages: string[] = []
+                    try {
+                        parsedImages = JSON.parse(data.image_url)
+                        if (!Array.isArray(parsedImages)) {
+                            parsedImages = data.image_url ? [data.image_url] : []
+                        }
+                    } catch {
                         parsedImages = data.image_url ? [data.image_url] : []
                     }
-                } catch {
-                    parsedImages = data.image_url ? [data.image_url] : []
-                }
 
-                setProduct({
-                    ...data,
-                    images: parsedImages.length > 0 ? parsedImages : (data.image_url ? [data.image_url] : [])
-                } as PublicProduct)
+                    setProduct({
+                        ...data,
+                        images: parsedImages.length > 0 ? parsedImages : (data.image_url ? [data.image_url] : [])
+                    } as PublicProduct)
+                } else if (error) {
+                    console.error("Supabase fetch error:", error)
+                }
+            } catch (err) {
+                console.error("Unexpected error:", err)
+            } finally {
+                setLoading(false)
             }
-            setLoading(false)
         }
         load()
     }, [id])
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
-    if (!product) return <div className="min-h-screen flex items-center justify-center">Product not found</div>
+    if (loading) return <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4"><div className="w-8 h-8 border-4 border-[#d4af37] border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-muted-foreground animate-pulse">Loading Product...</p></div>
+    if (!product) return <div className="min-h-screen bg-background flex flex-col items-center justify-center text-muted-foreground">Product not found or unavailable.</div>
 
     const downloadImage = async (imageUrl: string) => {
         try {
