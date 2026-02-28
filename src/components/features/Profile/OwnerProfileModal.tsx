@@ -137,6 +137,20 @@ export function OwnerProfileModal({ children }: { children: React.ReactNode }) {
                     <Share2 className="h-4 w-4" /> Share Profile
                 </Button>
 
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50 gap-2 w-full mt-2 border-t pt-4 rounded-none"
+                    onClick={() => {
+                        if (window.confirm("Are you sure you want to lock the app? You will need your PIN to enter again.")) {
+                            localStorage.removeItem("admin_authenticated")
+                            window.location.reload()
+                        }
+                    }}
+                >
+                    Lock App (Log Out)
+                </Button>
+
             </DialogContent>
         </Dialog>
     )
