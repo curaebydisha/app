@@ -55,7 +55,7 @@ export default function SharePage() {
                         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
                         const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
                         const rawUrl = `${supabaseUrl}/rest/v1/products?select=id,name,image_url,selling_price,notes,quantity,sizes&id=eq.${currentId}&apikey=${supabaseKey}`
-                        const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(rawUrl)}`
+                        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}`
 
                         const res = await fetch(proxyUrl)
                         if (res.ok) {

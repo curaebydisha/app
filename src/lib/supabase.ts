@@ -30,8 +30,8 @@ const customFetch = async (url: RequestInfo | URL, options?: RequestInit): Promi
                     proxyTarget = `${proxyTarget}${separator}apikey=${apiKey}`
                 }
 
-                // api.codetabs.com is a reliable free CORS proxy that passes GET queries perfectly
-                const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(proxyTarget)}`
+                // api.allorigins.win is much faster than codetabs and passes queries perfectly when using /raw
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(proxyTarget)}`
                 return await fetch(proxyUrl, options)
             } catch (proxyErr) {
                 console.error("Proxy also failed:", proxyErr)
