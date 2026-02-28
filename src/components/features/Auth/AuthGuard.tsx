@@ -13,12 +13,14 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         // Only run on client
-        const currentPath = window.location.pathname
-        const isPublicRoute = currentPath.includes('/product_detail') || currentPath.includes('/share')
+        if (typeof window !== 'undefined') {
+            const currentPath = window.location.pathname
+            const isPublicRoute = currentPath.includes('/product_detail') || currentPath.includes('/share')
 
-        const storedAuth = localStorage.getItem("admin_authenticated")
-        if (storedAuth === "true" || isPublicRoute) {
-            setIsAuthenticated(true)
+            const storedAuth = localStorage.getItem("admin_authenticated")
+            if (storedAuth === "true" || isPublicRoute) {
+                setIsAuthenticated(true)
+            }
         }
         setIsLoading(false)
     }, [pathname])
